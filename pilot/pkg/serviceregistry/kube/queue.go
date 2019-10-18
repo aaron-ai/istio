@@ -71,6 +71,7 @@ func (q *queueImpl) Push(item Task) {
 	q.cond.Signal()
 }
 
+// 事件嘟咧
 func (q *queueImpl) Run(stop <-chan struct{}) {
 	go func() {
 		<-stop
@@ -94,7 +95,7 @@ func (q *queueImpl) Run(stop <-chan struct{}) {
 		var item Task
 		item, q.queue = q.queue[0], q.queue[1:]
 		q.cond.L.Unlock()
-
+		// 调用相应的处理函数，实际上就是下面的 Apply 函数
 		if err := item.Handler(item.Obj, item.Event); err != nil {
 			log.Infof("Work item handle failed (%v), retry after delay %v", err, q.delay)
 			time.AfterFunc(q.delay, func() {

@@ -121,6 +121,7 @@ func NewDiscoveryService(environment *model.Environment, o DiscoveryServiceOptio
 		container.ServeMux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 		container.ServeMux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	}
+	// 注册 web service 容器
 	out.Register(container)
 	out.RestContainer = container
 

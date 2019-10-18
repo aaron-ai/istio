@@ -50,7 +50,7 @@ var (
 		Long:         "Istio Pilot provides fleet-wide traffic management capabilities in the Istio Service Mesh.",
 		SilenceUsage: true,
 	}
-
+	// 对应一组子命令
 	discoveryCmd = &cobra.Command{
 		Use:   "discovery",
 		Short: "Start Istio proxy discovery service.",
@@ -68,13 +68,13 @@ var (
 			// Create the stop channel for all of the servers.
 			stop := make(chan struct{})
 
-			// Create the server for the discovery service.
+			// Create the server for the discovery service. 创建服务
 			discoveryServer, err := bootstrap.NewServer(serverArgs)
 			if err != nil {
 				return fmt.Errorf("failed to create discovery service: %v", err)
 			}
 
-			// Start the server
+			// Start the server. 启动服务，会执行一堆启动函数，也就是执行在创建服务时注册的延迟启动函数，比如像启动 http 服务，grpc 服务，启动配置控制器，Ingress 同步器，Service 控制器等等。
 			if err := discoveryServer.Start(stop); err != nil {
 				return fmt.Errorf("failed to start discovery service: %v", err)
 			}

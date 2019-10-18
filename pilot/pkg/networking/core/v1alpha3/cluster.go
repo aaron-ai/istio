@@ -103,6 +103,7 @@ func getDefaultCircuitBreakerThresholds(direction model.TrafficDirection) *v2Clu
 // For outbound: Cluster for each service/subset hostname or cidr with SNI set to service hostname
 // Cluster type based on resolution
 // For inbound (sidecar only): Cluster for each inbound endpoint port and for each service port
+// xDS 使用 proxy 参数对代理 (Envoy) 进行识别
 func (configgen *ConfigGeneratorImpl) BuildClusters(env *model.Environment, proxy *model.Proxy, push *model.PushContext) []*apiv2.Cluster {
 	clusters := make([]*apiv2.Cluster, 0)
 	instances := proxy.ServiceInstances

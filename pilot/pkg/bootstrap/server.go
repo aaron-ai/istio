@@ -288,9 +288,11 @@ func NewServer(args PilotArgs) (*Server, error) {
 	prometheus.EnableHandlingTimeHistogram()
 
 	// Apply the arguments to the configuration.
+	// 初始化 k8s 客户端
 	if err := s.initKubeClient(&args); err != nil {
 		return nil, fmt.Errorf("kube client: %v", err)
 	}
+	// 初始化 mesh 字段
 	if err := s.initMesh(&args); err != nil {
 		return nil, fmt.Errorf("mesh: %v", err)
 	}
@@ -303,15 +305,19 @@ func NewServer(args PilotArgs) (*Server, error) {
 	if err := s.initCertController(&args); err != nil {
 		return nil, fmt.Errorf("certificate controller: %v", err)
 	}
+	// 里面有 MCP 的内容 (调用了 initMCPConfigController ) ，好像和 initServiceControllers 没有直接关系？不过里面调用了 createInformer 方法！
 	if err := s.initConfigController(&args); err != nil {
 		return nil, fmt.Errorf("config controller: %v", err)
 	}
+	// 为什么这里也有 out.services = xxx 与 Informer 相关的方法
 	if err := s.initServiceControllers(&args); err != nil {
 		return nil, fmt.Errorf("service controllers: %v", err)
 	}
+	// 初始化发现服务
 	if err := s.initDiscoveryService(&args); err != nil {
 		return nil, fmt.Errorf("discovery service: %v", err)
 	}
+	// 初始化 pilot 监控服务
 	if err := s.initMonitor(&args); err != nil {
 		return nil, fmt.Errorf("monitor: %v", err)
 	}
@@ -831,6 +837,7 @@ func (s *Server) initConfigController(args *PilotArgs) error {
 		s.configController = args.Config.Controller
 	} else if args.Config.FileDir != "" {
 		store := memory.Make(schemas.Istio)
+		// configController 本质上是一个 model.ConfigStoreCache 的 implement
 		configController := memory.NewController(store)
 
 		err := s.makeFileMonitor(args.Config.FileDir, configController)
@@ -898,7 +905,7 @@ func (s *Server) makeKubeConfigController(args *PilotArgs) (model.ConfigStoreCac
 			return nil, multierror.Prefix(err, "failed to register custom resources.")
 		}
 	}
-
+	// 到crd/controller/controller.go里，会调用 addInformer 方法
 	return controller.NewController(configClient, args.Config.ControllerOptions), nil
 }
 
@@ -920,6 +927,8 @@ func (s *Server) createK8sServiceControllers(serviceControllers *aggregate.Contr
 	clusterID := string(serviceregistry.KubernetesRegistry)
 	log.Infof("Primary Cluster name: %s", clusterID)
 	args.Config.ControllerOptions.ClusterID = clusterID
+	// 注意看这里的 NewController 中有对 out.services、out.endpoints、out.nodes、out.pods 和 Informer 的操作. 这里和 makeKubeConfigController 中的 Informer 有什么关系？
+	// 是到了kube/controller/controller.go里
 	kubectl := controller2.NewController(s.kubeClient, args.Config.ControllerOptions)
 	s.kubeRegistry = kubectl
 	serviceControllers.AddRegistry(
@@ -944,6 +953,7 @@ func hasKubeRegistry(args *PilotArgs) bool {
 
 // initServiceControllers creates and initializes the service controllers
 func (s *Server) initServiceControllers(args *PilotArgs) error {
+	// 这个 NewController 生成的 serviceControllers 是一个聚合控制器，能够用来管理多个平台 (比如 K8S，比如 MCP , Consul 等等的服务发现机制)，是 createK8sServiceControllers 里面 NewController 创建的结果的 Wrapper.
 	serviceControllers := aggregate.NewController()
 	registered := make(map[serviceregistry.ServiceRegistry]bool)
 	for _, r := range args.Service.Registries {
@@ -958,6 +968,8 @@ func (s *Server) initServiceControllers(args *PilotArgs) error {
 		case serviceregistry.MockRegistry:
 			s.initMemoryRegistry(serviceControllers)
 		case serviceregistry.KubernetesRegistry:
+			// 很重要，注意看看什么情况下回走到这个 case.这里实际上就是创建了一个 K8s 的 Controller，可以 List/Watch K8s 中的 Service、Endpoints、Node、Pod等几个资源对象。
+			// 但是注意 Informer 不是在这一步创建的，是在 initConfigController 里面就进行了创建？
 			if err := s.createK8sServiceControllers(serviceControllers, args); err != nil {
 				return err
 			}
@@ -1036,16 +1048,16 @@ func (s *Server) initDiscoveryService(args *PilotArgs) error {
 		PushContext:      model.NewPushContext(),
 	}
 
-	// Set up discovery service
+	// Set up discovery service，这个函数是最重要的, discovery 即创建的发现服务
 	discovery, err := envoy.NewDiscoveryService(
-		environment,
-		args.DiscoveryOptions,
+		environment, // 提供聚合性的上下文 API
+		args.DiscoveryOptions, // 监听地址等消息
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create discovery service: %v", err)
 	}
 	s.mux = discovery.RestContainer.ServeMux
-
+	// 创建 xDS 服务
 	s.EnvoyXdsServer = envoyv2.NewDiscoveryServer(environment,
 		istio_networking.NewConfigGenerator(args.Plugins),
 		s.ServiceController, s.kubeRegistry, s.configController)
@@ -1066,6 +1078,7 @@ func (s *Server) initDiscoveryService(args *PilotArgs) error {
 		clusterID := args.Config.ControllerOptions.ClusterID
 		s.incrementalMcpOptions.XDSUpdater = s.EnvoyXdsServer
 		s.incrementalMcpOptions.ClusterID = clusterID
+		// 放入服务发现的一些选项，XDSUpdater 非常重要
 		s.discoveryOptions.XDSUpdater = s.EnvoyXdsServer
 		s.discoveryOptions.Env = environment
 		s.discoveryOptions.ClusterID = clusterID
@@ -1208,6 +1221,7 @@ func (s *Server) initConsulRegistry(serviceControllers *aggregate.Controller, ar
 func (s *Server) initGrpcServer(options *istiokeepalive.Options) {
 	grpcOptions := s.grpcServerOptions(options)
 	s.grpcServer = grpc.NewServer(grpcOptions...)
+	// 将 xDS 服务注册到 grpc 服务器上
 	s.EnvoyXdsServer.Register(s.grpcServer)
 }
 

@@ -91,7 +91,7 @@ func NewController(client *Client, options controller2.Options) model.ConfigStor
 		kinds:  make(map[string]cacheHandler),
 	}
 
-	// add stores for CRD kinds
+	// add stores for CRD kinds, 为每种 CRD 紫东苑都会创建一个Informer
 	for _, s := range client.ConfigDescriptor() {
 		out.addInformer(s, options.WatchedNamespace, options.ResyncPeriod)
 	}
@@ -187,9 +187,11 @@ func (c *controller) createInformer(
 		&cache.ListWatch{ListFunc: lf, WatchFunc: wf}, o,
 		resyncPeriod, cache.Indexers{})
 
+	// client-go会将相应的事件传递到这个函数中，当然操作也就仅仅是放在队列中而已。
 	informer.AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
 			// TODO: filtering functions to skip over un-referenced resources (perf)
+			// 可以看到，一共有三种不同类型的事件，会将这些事件的详细内容，添加到 Controller 的一个 Queue 中。
 			AddFunc: func(obj interface{}) {
 				if err := vf(obj); err != nil {
 					log.Errorf("failed to add CRD. New value: %v, error: %v", obj, err)
