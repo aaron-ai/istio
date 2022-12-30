@@ -25,7 +25,7 @@ require (
 	github.com/aokoli/goutils v1.0.1 // indirect
 	github.com/armon/go-metrics v0.0.0-20190430140413-ec5e00d3c878 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
-	github.com/aws/aws-sdk-go v1.16.36
+	github.com/aws/aws-sdk-go v1.33.0
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/cactus/go-statsd-client v3.1.1+incompatible
@@ -60,7 +60,6 @@ require (
 	github.com/garyburd/redigo v1.6.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-redis/redis v6.10.2+incompatible
-	github.com/go-sql-driver/mysql v1.4.1 // indirect
 	github.com/gocql/gocql v0.0.0-20190423091413-b99afaf3b163 // indirect
 	github.com/gogo/protobuf v1.3.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
@@ -117,7 +116,7 @@ require (
 	github.com/pelletier/go-toml v1.3.0 // indirect
 	github.com/philhofer/fwd v1.0.0 // indirect
 	github.com/pierrec/lz4 v2.2.7+incompatible // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/pquerna/cachecontrol v0.0.0-20180306154005-525d0eb5f91d // indirect
 	github.com/prometheus/client_golang v1.1.0
@@ -135,7 +134,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.4.0
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.5.1
 	github.com/tinylib/msgp v1.0.2 // indirect
 	github.com/uber/jaeger-client-go v0.0.0-20190228190846-ecf2d03a9e80
 	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
@@ -145,7 +144,7 @@ require (
 	go.opencensus.io v0.21.0
 	go.uber.org/atomic v1.4.0
 	go.uber.org/zap v1.10.0
-	golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/sys v0.0.0-20191010194322-b09406accb47 // indirect
